@@ -53,8 +53,35 @@ impl Input for &str {
     }
 }
 
+impl Input for char {
+    type Item = char;
+
+    fn len(&self) -> usize {
+        1
+    }
+
+    fn separate_at(&self, i: usize) -> (Self, Self) {
+        panic!("cannot separate char")
+    }
+
+    fn items(&self) -> impl Iterator<Item = Self::Item> {
+        (0..1).map(|_| *self)
+    }
+
+    fn items_indices(&self) -> impl Iterator<Item = (usize, Self::Item)> {
+        (0..1).map(|i| (i, *self))
+    }
+
+    fn to_error(&self, kind: ErrorKind) -> ParseError<Self> {
+        ParseError::from_kind(*self, kind)
+    }
+}
+
 impl Compare<&str> for &str {
     fn compare(&self, other: &&str) -> bool {
+        if self.len() > other.len() {
+            return false;
+        }
         *self == &other[0..self.len()]
     }
 }

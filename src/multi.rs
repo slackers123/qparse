@@ -8,10 +8,11 @@ pub struct ManyParser<P> {
     f: P,
 }
 
-impl<I, P: Parser<I>> Parser<I> for ManyParser<P> {
+impl<I: Clone, P: Parser<I>> Parser<I> for ManyParser<P> {
     type Output = Vec<P::Output>;
 
     fn parse(&self, mut input: I) -> ParseRes<I, Self::Output> {
+        let original = input.clone();
         let mut i = 0;
         let mut res = Vec::new();
         while i < self.range.end {
@@ -31,24 +32,27 @@ impl<I, P: Parser<I>> Parser<I> for ManyParser<P> {
         if i >= self.range.start {
             return Ok((input, res));
         } else {
-            Err(ParseError::from_kind(input, ErrorKind::MoreNeeded))
+            Err(ParseError::from_kind(original, ErrorKind::MoreNeeded))
         }
     }
 }
 
-pub fn many<I, P: Parser<I>>(f: P, range: Range<usize>) -> impl Parser<I, Output = Vec<P::Output>> {
+pub fn many<I: Clone, P: Parser<I>>(
+    f: P,
+    range: Range<usize>,
+) -> impl Parser<I, Output = Vec<P::Output>> {
     ManyParser { range, f }
 }
 
-pub fn many0<I, P: Parser<I>>(f: P) -> impl Parser<I, Output = Vec<P::Output>> {
+pub fn many0<I: Clone, P: Parser<I>>(f: P) -> impl Parser<I, Output = Vec<P::Output>> {
     many(f, 0..usize::MAX)
 }
 
-pub fn many1<I, P: Parser<I>>(f: P) -> impl Parser<I, Output = Vec<P::Output>> {
+pub fn many1<I: Clone, P: Parser<I>>(f: P) -> impl Parser<I, Output = Vec<P::Output>> {
     many(f, 1..usize::MAX)
 }
 
-pub fn many_with_separator<I, P: Parser<I>, S: Parser<I>>(
+pub fn many_with_separator<I: Clone + Display, P: Parser<I>, S: Parser<I>>(
     parser: P,
     separator: S,
 ) -> impl Parser<I, Output = Vec<P::Output>> {
@@ -60,7 +64,7 @@ pub struct ManyLaxSeparator<P, S> {
     s: S,
 }
 
-impl<I: Display, P, S> Parser<I> for ManyLaxSeparator<P, S>
+impl<I: Clone, P, S> Parser<I> for ManyLaxSeparator<P, S>
 where
     P: Parser<I>,
     S: Parser<I>,
@@ -94,7 +98,7 @@ where
     }
 }
 
-pub fn many_with_separator_lax<I: Display, P: Parser<I>, S: Parser<I>>(
+pub fn many_with_separator_lax<I: Clone, P: Parser<I>, S: Parser<I>>(
     p: P,
     s: S,
 ) -> impl Parser<I, Output = Vec<P::Output>> {

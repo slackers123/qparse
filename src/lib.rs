@@ -16,6 +16,7 @@ pub mod whitespace;
 use crate::{
     input::{Compare, Input},
     list::List,
+    parser::Parser,
 };
 
 pub type SimpleParser<I, T> = fn(I) -> ParseRes<I, T>;
@@ -59,10 +60,12 @@ pub enum ErrorKind {
 
 pub type ParseRes<I, T> = Result<(I, T), ParseError<I>>;
 
-pub fn to_optional<I: Input, T>(input: I, res: ParseRes<I, T>) -> (I, Option<T>) {
-    match res {
-        Ok((input, val)) => (input, Some(val)),
-        Err(_) => (input, None),
+pub fn to_optional<I, T>(
+    parser: impl Parser<I, Output = T>,
+) -> impl Fn(I) -> ParseRes<I, Option<T>> {
+    move |input| match parser.parse(input) {
+        Ok((input, val)) => Ok((input, Some(val))),
+        Err(e) => Ok((e.input, None)),
     }
 }
 
@@ -77,14 +80,14 @@ pub fn map_err<I, T>(res: Result<T, impl Error + 'static>) -> impl FnOnce(I) -> 
     }
 }
 
-pub fn char<I>(c: I::Item) -> impl Fn(I) -> ParseRes<I, I::Item>
+pub fn char<I, C: Clone>(c: C) -> impl Fn(I) -> ParseRes<I, C>
 where
     I: Input,
-    I::Item: Compare<I>,
+    C: Input + Compare<I>,
 {
     move |input| {
         if c.compare(&input) {
-            Ok((input.separate_at(1).1, c))
+            Ok((input.separate_at(c.len()).1, c.clone()))
         } else {
             Err(ParseError::from_kind(input, ErrorKind::NotMatching))
         }
